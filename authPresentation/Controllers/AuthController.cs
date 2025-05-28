@@ -1,23 +1,31 @@
-﻿using authPresentation.Data.Entities;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using authPresentation.Data.Entities;
 using authPresentation.Extensions;
 using authPresentation.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace authPresentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IConfiguration config) : ControllerBase
+public class AuthController(
+    UserManager<AppUser> userManager,
+    SignInManager<AppUser> signInManager,
+    IConfiguration config,
+    IHttpClientFactory httpClientFactory
+) : ControllerBase
 {
     private readonly UserManager<AppUser> _userManager = userManager;
     private readonly SignInManager<AppUser> _signInManager = signInManager;
     private readonly IConfiguration _config = config;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
@@ -31,9 +39,54 @@ public class AuthController(UserManager<AppUser> userManager, SignInManager<AppU
         user.UserName = dto.Email;
 
         var result = await _userManager.CreateAsync(user, dto.Password);
-        return result.Succeeded
-            ? Ok()
-            : BadRequest(result.Errors);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("VerificationService");
+
+            await client.PostAsJsonAsync("verification/send", new
+            {
+                Email = dto.Email
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not send verification email: {ex.Message}");
+        }
+
+        return Ok("Account created. Please verify your email.");
+    }
+
+    [HttpPost("confirm")]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
+    {
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+        if (user == null) return NotFound("User not found");
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("VerificationService");
+
+            var response = await client.PostAsJsonAsync("verification/verify", new
+            {
+                Email = dto.Email,
+                Code = dto.Code
+            });
+
+            if (!response.IsSuccessStatusCode)
+                return BadRequest("Invalid or expired code");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Verification service error: {ex.Message}");
+            return StatusCode(500, "Verification service error");
+        }
+
+        user.EmailConfirmed = true;
+        await _userManager.UpdateAsync(user);
+
+        return Ok("Email confirmed successfully.");
     }
 
     [HttpPost("login")]
@@ -44,8 +97,11 @@ public class AuthController(UserManager<AppUser> userManager, SignInManager<AppU
         var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null) return Unauthorized();
 
-        var valid = await _userManager.CheckPasswordAsync(user, dto.Password);
-        if (!valid) return Unauthorized();
+        if (!await _userManager.CheckPasswordAsync(user, dto.Password))
+            return Unauthorized();
+
+        if (!await _userManager.IsEmailConfirmedAsync(user))
+            return Unauthorized("Please verify your email before logging in.");
 
         var claims = new[]
         {
@@ -76,6 +132,18 @@ public class AuthController(UserManager<AppUser> userManager, SignInManager<AppU
         return Ok();
     }
 
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt", new CookieOptions
+        {
+            Secure = true,
+            SameSite = SameSiteMode.None
+        });
+
+        return Ok("Logged out");
+    }
+
     [HttpGet("me")]
     [Authorize]
     public IActionResult Me()
@@ -92,17 +160,4 @@ public class AuthController(UserManager<AppUser> userManager, SignInManager<AppU
             email
         });
     }
-
-    [HttpPost("logout")]
-    public IActionResult Logout()
-    {
-        Response.Cookies.Delete("jwt", new CookieOptions
-        {
-            Secure = true,
-            SameSite = SameSiteMode.None
-        });
-
-        return Ok();
-    }
-
 }

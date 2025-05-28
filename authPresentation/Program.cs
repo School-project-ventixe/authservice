@@ -16,6 +16,13 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
     .AddDefaultTokenProviders();
 
 
+builder.Services.AddHttpClient("VerificationService", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7050/api/");
+});
+
+
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
