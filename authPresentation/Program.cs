@@ -18,7 +18,7 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
 
 builder.Services.AddHttpClient("VerificationService", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7050/api/");
+    client.BaseAddress = new Uri(builder.Configuration["EmailVerificationProvider:BaseUrl"]!);
 });
 
 
@@ -53,7 +53,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddCors(o =>
     o.AddPolicy("CorsPolicy", p =>
-        p.WithOrigins("http://localhost:5173")
+        p.WithOrigins("https://yellow-stone-0fa87d003.6.azurestaticapps.net")
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials()));

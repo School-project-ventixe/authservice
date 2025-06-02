@@ -12,8 +12,8 @@ using authPresentation.Data;
 namespace authPresentation.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250523084446_Init")]
-    partial class Init
+    [Migration("20250602091131_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

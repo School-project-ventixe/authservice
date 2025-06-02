@@ -45,7 +45,7 @@ public class AuthController(
         {
             var client = _httpClientFactory.CreateClient("VerificationService");
 
-            await client.PostAsJsonAsync("verification/send", new
+            await client.PostAsJsonAsync("api/verification/send", new
             {
                 Email = dto.Email
             });
@@ -68,7 +68,7 @@ public class AuthController(
         {
             var client = _httpClientFactory.CreateClient("VerificationService");
 
-            var response = await client.PostAsJsonAsync("verification/verify", new
+            var response = await client.PostAsJsonAsync("api/verification/verify", new
             {
                 Email = dto.Email,
                 Code = dto.Code
