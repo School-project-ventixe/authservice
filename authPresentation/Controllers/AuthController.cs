@@ -103,8 +103,10 @@ public class AuthController(
         if (!await _userManager.IsEmailConfirmedAsync(user))
             return Unauthorized("Please verify your email before logging in.");
 
+
         var claims = new[]
-        {
+{
+            new Claim(ClaimTypes.NameIdentifier, user.Email!),
             new Claim(JwtRegisteredClaimNames.Sub, user.Email!),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(ClaimTypes.GivenName, user.FirstName),
@@ -129,7 +131,7 @@ public class AuthController(
             Expires = DateTimeOffset.UtcNow.AddHours(1)
         });
 
-        return Ok();
+        return Ok(new { accessToken = tokenStr });
     }
 
     [HttpPost("logout")]
