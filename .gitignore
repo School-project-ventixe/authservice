@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /authPresentation/appsettings.json
 /authPresentation/appsettings.Development.json
+/authPresentation/Migrations/20250602091131_init.cs
+/authPresentation/Migrations/ApplicationDbContextModelSnapshot.cs
