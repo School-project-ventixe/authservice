@@ -153,7 +153,7 @@ public class AuthController(
         var user = HttpContext.User;
         var firstName = user.FindFirst(ClaimTypes.GivenName)?.Value;
         var lastName = user.FindFirst(ClaimTypes.Surname)?.Value;
-        var email = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var email = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         return Ok(new
         {
